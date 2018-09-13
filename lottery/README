@@ -1,0 +1,120 @@
+
+
+合约功能
+
+* 新建抽奖
+* 设置抽奖合约参数配置
+* 查看抽奖合约参数配置
+* 开启抽奖
+* 参与抽奖
+* 查询抽奖信息
+* 查询抽奖结果
+
+合约部署
+
+1. 部署LotteryData合约
+2. 部署LotteryControl合约
+3. 调用LotteryData合约 setLotteryControl方法，设置LotteryControl合约地址
+使用方法
+
+开发者或用户只通过调用LotteryControl合约方法进行交互
+
+创建抽奖
+
+开发者调用newLottery方法创建抽奖活动，该方法返回活动ID，开发者需保存活动ID，后续调用合约方法要求传入该活动ID；
+
+function newLottery(
+		"lottery",      //活动名称
+		1,                //固定时间开奖模式
+		)
+
+创建后再调用setLotteryConfig进行活动规则设置，开发者可根据需求传入参数进行规则配置，配置参数说明如下。
+
+// 设置抽奖配置
+function setLotteryConfig (
+		0,            //抽奖活动ID
+		1536681600,   //活动开始时间, Unix时间戳 2018/9/12 0:00
+		1536760800,   //活动结束时间, Unix时间戳 2018/9/12 22:00
+		false,       //是否限制每天抽奖时间
+		0,           //每天抽奖开始时间
+		0,           //每天抽奖结束时间
+		-1,          //参与者抽奖次数限制, -1 表示不限制
+		2,           //每次抽奖的金额 单位：链克
+		1536760800,  //指定时间开奖(Unix时间戳) 2018/9/12 22:00
+		5,           //中奖人数
+		10,            //手续费比例，10%
+		”0xca35b7d915458ef540ade6068dfe2f44e8fa733c“   //手续费接收地址
+		)
+
+	调用setLotteryConfig后，抽奖活动自动生效。
+
+	参与抽奖
+
+	用户调用joinLottery方法参与抽奖，若满足抽奖规则，则成功参与，用户可在抽奖开启后查看抽奖结果；
+
+	开奖
+
+	开发者在开奖时间到达后调用openLottery开奖。
+	* 满足开奖条件，给中奖用户发送奖品，手续费发送的指定接收地址，活动状态为已开奖
+	* 不满足开奖条件，退还参与抽奖用户相应的链克，不扣手续费，活动状态为已退款
+
+	查询抽奖
+
+	1、查询结果
+
+	开发者或用户可通过调用queryLotteryResult方法查看结果
+
+
+	function queryLotteryResult(uint lotteryID) view external 
+	returns(
+			uint,       //活动状态   3：已开奖  4：已退款
+			address[],  //中奖用户地址
+			uint[],     //中奖用户中奖金额，单位：wei   1 链克 = 1e18 wei   
+			uint,       //已发奖人次数
+			uint,       //已发奖金额计数，单位：wei     1 链克 = 1e18 wei
+			uint,       //已退款金额计数, 单位：wei     1 链克 = 1e18 wei
+			uint,       //总的手续费, 单位：Wei
+			address[],  //已发奖用户地址
+			address[]  //已退款用户地址 
+
+			2、查询状态
+
+			开发者可以调用queryLottery 查询抽奖的实时状态
+
+			function queryLottery(uint lotteryID) view onlyOwner external 
+			returns(
+				string,      //抽奖活动名称
+				uint,        //抽奖模式
+				uint,        //抽奖活动状态  
+				uint,        //目前奖池累积金额，单位：链克
+				address[],   //抽奖用户账户地址
+				uint[],      //抽奖用户抽奖次数    
+				uint,        //抽奖人次数
+				uint[]       //管理员提现记录  单位：wei    1 链克 = 1e18 wei
+				)
+
+	开发者可以调用 queryLotteryConfig 查询抽奖活动的各项配置参数
+
+function queryLotteryConfig(uint lotteryID)
+	onlyOwner view external 
+returns (
+		uint,      //抽奖模式
+		uint,      //活动开始时间
+		uint,      //活动结束时间
+		bool,      //是否限制每天抽奖时间
+		uint,      //每天抽奖开始时间
+		uint,      //每天抽奖结束时间
+		int,       //参与者抽奖次数限制
+		uint,      //每次抽奖需要的金额 单位：链克
+		uint,      //开奖条件  抽奖模式 0:奖池模式，奖池金额达到指定数量(单位：链克)  1:开奖时间模式，指定时刻开奖(单位：秒)  2:地址模式，参与者账户地址达到指定数量
+		uint,       //奖品平分成几份发放
+		uint,     //手续费比例
+		address   //手续费接收地址
+		)
+
+	相关机制
+
+	奖池内全部链克（扣除掉手续费）平分成N份(开发者可修改合约参数配置)， 依次将每份奖励随机分配给抽奖参与用户，一个用户可能获得多份奖励。
+
+	创建新一轮的抽奖， 开奖， 需开发者调用对应方法主动触发。
+
